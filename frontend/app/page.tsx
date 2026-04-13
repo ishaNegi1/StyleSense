@@ -144,76 +144,49 @@ export default function Home() {
     if (f) handleFileChange(f);
   };
  
-  // ── UPLOAD ────────────────────────────────────────────────────────────────
-  // [NEW] Wake server before uploading (handles Render free tier spin-down)
-  const wakeUpServer = async (): Promise<boolean> => {
-    const BASE_URL =
-      process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-
-    for (let i = 0; i < 5; i++) {
-      try {
-        const res = await fetch(`${BASE_URL}/analyze`, {
-          method: "OPTIONS", // safer for CORS + lightweight
-          signal: AbortSignal.timeout(5000),
-        });
-
-        if (res.ok) return true;
-      } catch (err) {
-        // silently retry, no drama
-      }
-
-      await new Promise((r) => setTimeout(r, 2000));
-    }
-
-    return false;
-  };
- 
   const handleUpload = async () => {
     if (!file) return;
+
     setLoading(true);
     setUploadError(null);
- 
-    try {
-      const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
- 
-      // Wake server first
-      const awake = await wakeUpServer();
 
-      if (!awake) {
-        setUploadError("Server took too long to respond. Try again.");
-        throw new Error("Server not responding");
-      }
- 
+    try {
+      const BASE_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
       const formData = new FormData();
       formData.append("image", file);
- 
+
       const res = await fetch(`${BASE_URL}/analyze`, {
         method: "POST",
-        body: formData
-      })
- 
+        body: formData,
+      });
+
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
+
       const { color, category } = await res.json();
- 
+
+      // Upload to Supabase
       const fileName = `${Date.now()}-${file.name}`;
       await supabase.storage.from("wardrobe-images").upload(fileName, file);
- 
+
       const { data } = supabase.storage
         .from("wardrobe-images")
         .getPublicUrl(fileName);
- 
+
       await supabase.from("wardrobe_items").insert([
         { image_url: data.publicUrl, category, color },
       ]);
- 
+
       await fetchItems();
+
       setFile(null);
       setPreview(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err: any) {
       setUploadError(err.message || "Upload failed.");
     }
- 
+
     setLoading(false);
   };
  
