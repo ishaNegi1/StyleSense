@@ -5,18 +5,23 @@ from torchvision import transforms
 from PIL import Image
 import io
 import numpy as np
-import cv2
 import os
 
 from model import build_model
 
 app = Flask(__name__)
-CORS(
-    app,
-    resources={r"/*": {"origins": "*"}},
-    allow_headers=["Content-Type"],
-    methods=["GET", "POST", "OPTIONS"]
-)
+
+# ✅ Strong CORS (works in all cases)
+CORS(app)
+
+# 🔥 FORCE headers (this is what actually fixes your issue)
+@app.after_request
+def after_request(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
+    response.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS"
+    return response
+
 
 # ---------------- CLASS NAMES ----------------
 class_names = ["dress", "jeans", "shirt", "shoes"]
@@ -49,7 +54,7 @@ def detect_color(image):
         return "white"
     elif r < 50 and g < 50 and b < 50:
         return "black"
-    elif abs(r-g)<25 and abs(g-b)<25:
+    elif abs(r-g) < 25 and abs(g-b) < 25:
         return "gray"
     elif r > g and r > b:
         return "red"
@@ -60,9 +65,11 @@ def detect_color(image):
     else:
         return "mixed"
 
+
 # ---------------- ROUTES ----------------
 @app.route("/analyze", methods=["POST", "OPTIONS"])
 def analyze():
+    # ✅ Handle preflight properly
     if request.method == "OPTIONS":
         return '', 200
 
@@ -76,7 +83,6 @@ def analyze():
     try:
         image = Image.open(io.BytesIO(file.read())).convert("RGB")
 
-        # Category prediction
         img_tensor = transform(image).unsqueeze(0).to(device)
 
         with torch.no_grad():
@@ -96,11 +102,13 @@ def analyze():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 # ---------------- HEALTH CHECK ----------------
 @app.route("/")
 def home():
     return "✅ Backend is running"
 
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False) 
+    app.run(host="0.0.0.0", port=port, debug=False)
