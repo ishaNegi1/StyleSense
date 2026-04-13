@@ -5,7 +5,7 @@ NUM_CLASSES = 4
 
 def build_model():
     # ✅ Load pretrained MobileNetV2
-    model = models.mobilenet_v2(weights=models.MobileNet_V2_Weights.DEFAULT)
+    model = models.mobilenet_v2(weights=None)
 
     # ✅ Freeze backbone — only train the classifier head
     for param in model.features.parameters():
