@@ -13,11 +13,7 @@ from model import build_model
 app = Flask(__name__)
 CORS(
     app,
-    origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "https://style-sense-five.vercel.app",  # ✅ THIS ONE
-    ],
+    resources={r"/*": {"origins": "*"}},
 )
 
 # ---------------- CLASS NAMES ----------------
