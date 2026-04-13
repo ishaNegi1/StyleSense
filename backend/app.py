@@ -6,6 +6,7 @@ from PIL import Image
 import io
 import numpy as np
 import cv2
+import os
 
 from model import build_model
 
@@ -114,4 +115,5 @@ def home():
     return "✅ Backend is running"
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
