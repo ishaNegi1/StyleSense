@@ -14,7 +14,7 @@ app = Flask(__name__)
 CORS(app, resources={
     r"/analyze": {
         "origins": [
-            "https://style-sense-m77z412kl-shreya-aggarwals-projects.vercel.app"
+            "https://style-sense-olive.vercel.app"
         ]
     }
 })
