@@ -28,7 +28,8 @@ def get_model():
     if _model is None:
         print("⏳ Loading model...")
         _model = build_model()
-        _model.load_state_dict(torch.load("model.pth", map_location=device))
+        model_path = os.path.join(os.path.dirname(__file__), "model.pth")
+        _model.load_state_dict(torch.load(model_path, map_location=device))
         _model = _model.to(device)
         _model.eval()
         print("✅ Model loaded successfully")
