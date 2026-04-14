@@ -199,6 +199,12 @@ useEffect(() => {
 
       const { data: userData } = await supabase.auth.getUser();
 
+      if (!userData?.user) {
+        return; // or show error / redirect
+      }
+
+      const userId = userData.user.id;
+
 await supabase.from("wardrobe_items").insert([
   {
     image_url: data.publicUrl,
@@ -377,27 +383,37 @@ await fetchItems(userData.user.id);
     // [NEW] Save to saved_outfits table
     const { data: userData } = await supabase.auth.getUser();
 
-await supabase.from("saved_outfits").insert([
-  {
-    outfit_data: outfitData,
-    liked,
-    user_id: userData.user.id,
-  },
-]);
+    if (!userData?.user) {
+      console.error("User not authenticated");
+      return;
+    }
+
+    await supabase.from("saved_outfits").insert([
+      {
+        outfit_data: outfitData,
+        liked,
+        user_id: userData.user.id,
+      },
+    ]);
   };
  
   // ── DELETE ────────────────────────────────────────────────────────────────
   const handleDelete = async (item: WardrobeItem) => {
-  const fileName = item.image_url.split("/").pop();
+    const fileName = item.image_url.split("/").pop();
 
-  await supabase.storage.from("wardrobe-images").remove([fileName!]);
+    await supabase.storage.from("wardrobe-images").remove([fileName!]);
 
-  await supabase.from("wardrobe_items").delete().eq("id", item.id);
+    await supabase.from("wardrobe_items").delete().eq("id", item.id);
 
-  const { data: userData } = await supabase.auth.getUser(); THIS
+    const { data: userData } = await supabase.auth.getUser();
 
-  await fetchItems(userData.user.id); 
-};
+    if (!userData?.user) {
+      console.error("User not authenticated");
+      return;
+    }
+
+    await fetchItems(userData.user.id);
+  };
  
   // ── RENDER ────────────────────────────────────────────────────────────────
   return (
