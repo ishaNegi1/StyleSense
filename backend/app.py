@@ -6,14 +6,11 @@ from PIL import Image
 import io
 import numpy as np
 import os
-import cv2
 from sklearn.cluster import KMeans
 
 from model import build_model
 
 app = Flask(__name__)
-
-# ✅ Simple CORS (just works everywhere)
 CORS(app)
 
 # ---------------- CLASS NAMES ----------------
@@ -45,60 +42,54 @@ transform = transforms.Compose([
                          [0.229, 0.224, 0.225]),
 ])
 
-# ---------------- COLOR DETECTION ----------------
+# ---------------- COLOR DETECTION (LIGHTWEIGHT KMEANS) ----------------
 def detect_color(image):
     img = np.array(image)
 
-    # 🧠 focus center (remove background noise)
+    # 🧠 center crop (focus on clothing)
     h, w, _ = img.shape
     img = img[h//4:3*h//4, w//4:3*w//4]
 
-    img = cv2.resize(img, (100, 100))
+    # 🔻 downsample heavily (IMPORTANT for memory)
+    img = img[::4, ::4]
 
-    # reshape for clustering
     pixels = img.reshape(-1, 3)
 
-    # 🎯 K-means to find dominant color
-    kmeans = KMeans(n_clusters=3, n_init=10)
+    # 🔻 limit number of pixels
+    if len(pixels) > 1000:
+        idx = np.random.choice(len(pixels), 1000, replace=False)
+        pixels = pixels[idx]
+
+    # 🎯 lightweight KMeans
+    kmeans = KMeans(n_clusters=2, n_init=5)
     kmeans.fit(pixels)
 
-    # get dominant cluster
     counts = np.bincount(kmeans.labels_)
     dominant = kmeans.cluster_centers_[np.argmax(counts)]
 
-    # convert to HSV
-    dominant = np.uint8([[dominant]])
-    hsv = cv2.cvtColor(dominant, cv2.COLOR_RGB2HSV)[0][0]
+    r, g, b = dominant
 
-    h, s, v = hsv
-
-    # 🎯 classify color properly
-    if v < 50:
-        return "black"
-    elif v > 200 and s < 30:
+    # ---------------- COLOR CLASSIFICATION ----------------
+    if r > 200 and g > 200 and b > 200:
         return "white"
-    elif s < 40:
+    elif r < 50 and g < 50 and b < 50:
+        return "black"
+    elif abs(r - g) < 20 and abs(g - b) < 20:
         return "gray"
-
-    if h < 10 or h > 160:
+    elif r > g and r > b:
         return "red"
-    elif h < 25:
-        return "orange"
-    elif h < 35:
-        return "yellow"
-    elif h < 85:
+    elif g > r and g > b:
         return "green"
-    elif h < 130:
+    elif b > r and b > g:
         return "blue"
-    elif h < 160:
-        return "purple"
+    elif r > 150 and g > 100:
+        return "yellow"
     else:
-        return "unknown"
+        return "mixed"
 
 # ---------------- ROUTES ----------------
 @app.route("/analyze", methods=["POST", "OPTIONS"])
 def analyze():
-    # ✅ Handle preflight (browser CORS)
     if request.method == "OPTIONS":
         return '', 200
 
