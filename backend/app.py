@@ -6,6 +6,8 @@ from PIL import Image
 import io
 import numpy as np
 import os
+import cv2
+from sklearn.cluster import KMeans
 
 from model import build_model
 
@@ -46,23 +48,52 @@ transform = transforms.Compose([
 # ---------------- COLOR DETECTION ----------------
 def detect_color(image):
     img = np.array(image)
-    avg = img.mean(axis=(0,1))
-    r, g, b = avg
 
-    if r > 200 and g > 200 and b > 200:
-        return "white"
-    elif r < 50 and g < 50 and b < 50:
+    # 🧠 focus center (remove background noise)
+    h, w, _ = img.shape
+    img = img[h//4:3*h//4, w//4:3*w//4]
+
+    img = cv2.resize(img, (100, 100))
+
+    # reshape for clustering
+    pixels = img.reshape(-1, 3)
+
+    # 🎯 K-means to find dominant color
+    kmeans = KMeans(n_clusters=3, n_init=10)
+    kmeans.fit(pixels)
+
+    # get dominant cluster
+    counts = np.bincount(kmeans.labels_)
+    dominant = kmeans.cluster_centers_[np.argmax(counts)]
+
+    # convert to HSV
+    dominant = np.uint8([[dominant]])
+    hsv = cv2.cvtColor(dominant, cv2.COLOR_RGB2HSV)[0][0]
+
+    h, s, v = hsv
+
+    # 🎯 classify color properly
+    if v < 50:
         return "black"
-    elif abs(r-g) < 25 and abs(g-b) < 25:
+    elif v > 200 and s < 30:
+        return "white"
+    elif s < 40:
         return "gray"
-    elif r > g and r > b:
+
+    if h < 10 or h > 160:
         return "red"
-    elif g > r and g > b:
+    elif h < 25:
+        return "orange"
+    elif h < 35:
+        return "yellow"
+    elif h < 85:
         return "green"
-    elif b > r and b > g:
+    elif h < 130:
         return "blue"
+    elif h < 160:
+        return "purple"
     else:
-        return "mixed"
+        return "unknown"
 
 # ---------------- ROUTES ----------------
 @app.route("/analyze", methods=["POST", "OPTIONS"])

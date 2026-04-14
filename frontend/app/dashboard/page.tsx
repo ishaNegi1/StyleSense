@@ -21,7 +21,7 @@ const CATEGORY_BG: Record<string, string> = {
   shoes: "bg-green-50",
 };
  
-const COLOR_DOT: Record<string, string> = {
+const COLOR_DOT = {
   white: "bg-white border border-gray-300",
   black: "bg-gray-900",
   gray: "bg-gray-400",
@@ -30,6 +30,8 @@ const COLOR_DOT: Record<string, string> = {
   blue: "bg-blue-500",
   yellow: "bg-yellow-400",
   purple: "bg-purple-500",
+  orange: "bg-orange-400",   // 👈 ADD THIS
+  unknown: "bg-stone-300",   // 👈 fallback
   mixed: "bg-gradient-to-br from-pink-400 via-yellow-300 to-blue-400",
 };
  
@@ -44,6 +46,7 @@ const COLOR_MATCH: Record<string, string[]> = {
   green:  ["white", "black", "yellow"],
   yellow: ["black", "blue", "green"],
   purple: ["white", "black", "gray"],
+  orange: ["black", "white", "blue"],
   mixed:  ["black", "white", "gray"],
 };
  
@@ -595,7 +598,7 @@ await fetchItems(userData.user.id);
                           {CATEGORY_LABEL[item.category] || item.category}
                         </span>
                         <span className="flex items-center gap-1.5 text-[11px] text-stone-400 capitalize">
-                          <span className={`w-2.5 h-2.5 rounded-full inline-block shrink-0 ${COLOR_DOT[item.color] || "bg-stone-300"}`} />
+                          <span className={`w-2.5 h-2.5 rounded-full ${COLOR_DOT[item.color as keyof typeof COLOR_DOT] || "bg-stone-300"}`} />
                           {item.color}
                         </span>
                       </div>
